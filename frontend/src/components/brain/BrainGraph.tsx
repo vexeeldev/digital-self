@@ -13,7 +13,6 @@ import ReactFlow, {
   type EdgeChange,
   Position,
   MarkerType,
-  Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide } from 'd3-force';
@@ -21,6 +20,7 @@ import { getGraph } from '@/lib/api';
 import { ApiGraphNode, ApiGraphEdge } from '@/lib/types';
 import MemoryNode from './MemoryNode';
 import BrainGraph3D from './BrainGraph3D';
+import BrainGraphIsometric from './BrainGraphIsometric';
 
 const nodeTypes = {
   memoryNode: MemoryNode,
@@ -90,6 +90,7 @@ interface BrainGraphProps {
 }
 
 export type GraphState = 'loading' | 'empty-no-filter' | 'empty-no-memory' | 'has-data';
+export type ViewMode = '2d' | '3d' | 'iso';
 
 export default function BrainGraph({
   experienceId,
@@ -104,7 +105,7 @@ export default function BrainGraph({
   const [rawApiNodes, setRawApiNodes] = useState<ApiGraphNode[]>([]);
   const [rawApiEdges, setRawApiEdges] = useState<ApiGraphEdge[]>([]);
   const [state, setState] = useState<GraphState>('loading');
-  const [viewMode, setViewMode] = useState<'2d' | '3d'>('3d'); // Default to 3D for WOW effect
+  const [viewMode, setViewMode] = useState<ViewMode>('iso'); // Default to 3D Isometric for high readability + WOW factor
 
   useEffect(() => {
     setState('loading');
@@ -173,8 +174,8 @@ export default function BrainGraph({
 
   return (
     <div style={{ height: '100%', width: '100%' }} className="relative bg-black">
-      {/* 2D / 3D Mode View Switcher */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
+      {/* 2D / 3D Galaxy / 3D Isometric View Switcher */}
+      <div className="absolute top-4 right-4 z-30 flex items-center gap-3">
         {/* View Mode Toggle Pill */}
         <div className="bg-[#09090b]/90 backdrop-blur border border-[#27272a] p-1 rounded-lg flex items-center gap-1 shadow-2xl">
           <button
@@ -188,14 +189,24 @@ export default function BrainGraph({
             2D GRID
           </button>
           <button
-            onClick={() => setViewMode('3d')}
+            onClick={() => setViewMode('iso')}
             className={`px-3 py-1.5 rounded text-[11px] font-mono tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
-              viewMode === '3d'
+              viewMode === 'iso'
                 ? 'bg-teal-500/20 text-teal-300 border border-teal-500/50 shadow-lg shadow-teal-500/10'
                 : 'text-zinc-400 hover:text-white'
             }`}
           >
             <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+            3D ISOMETRIC
+          </button>
+          <button
+            onClick={() => setViewMode('3d')}
+            className={`px-3 py-1.5 rounded text-[11px] font-mono tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+              viewMode === '3d'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-lg shadow-cyan-500/10'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
             3D GALAXY
           </button>
         </div>
@@ -219,8 +230,15 @@ export default function BrainGraph({
         </div>
       </div>
 
-      {/* Render 3D or 2D based on viewMode */}
-      {viewMode === '3d' ? (
+      {/* Render View Mode */}
+      {viewMode === 'iso' ? (
+        <BrainGraphIsometric
+          apiNodes={rawApiNodes}
+          apiEdges={rawApiEdges}
+          selectedNodeId={selectedNodeId}
+          onNodeClick={onNodeClick}
+        />
+      ) : viewMode === '3d' ? (
         <BrainGraph3D
           apiNodes={rawApiNodes}
           apiEdges={rawApiEdges}
