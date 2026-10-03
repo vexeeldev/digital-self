@@ -1,0 +1,204 @@
+# =============================================================================
+# Digital Self — params.yaml
+# Version: V2.1 — Initial Technical Contract
+# Based on: PRD V2 §12, §13, PRD V2.1 §7, §8, §9
+# =============================================================================
+#
+# This file stores learning, activation, and pattern parameters.
+#
+# PRD Principle: "Parameters must be configurable without modifying source code."
+# (PRD V2.1 §7, §10)
+#
+# These values are BASELINE ONLY.
+# They are not final values. They will be calibrated through evaluation
+# and experimentation (PRD V2 §38 — Stability Evaluation).
+#
+# Refer to schema.sql and models.py for the data structures these
+# parameters operate on.
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# learning
+#
+# Controls how association strength changes when new evidence arrives.
+# PRD V2 §12, PRD V2.1 §8
+#
+# Formulas:
+#   Positive evidence:  s_new = s_old + alpha × w × (1 - s_old)
+#   Negative evidence:  s_new = s_old - beta  × w × s_old
+#   Time decay:         s_new = s_old × exp(-decay_lambda × Δt)
+#
+# Where:
+#   s     = current association strength
+#   alpha = positive learning rate  (how fast strength grows on positive evidence)
+#   beta  = negative learning rate  (how fast strength shrinks on negative evidence)
+#   w     = evidence weight         (see evidence_weights section below)
+#   lambda= decay rate              (how fast strength fades without reinforcement)
+#   Δt    = time elapsed since last update (in days)
+# -----------------------------------------------------------------------------
+learning:
+  # How much a positive evidence observation increases association strength.
+  # Range: (0.0, 1.0)
+  # Higher = faster learning, but risks overfitting to few experiences.
+  alpha: 0.20
+
+  # How much a negative evidence observation decreases association strength.
+  # Range: (0.0, 1.0)
+  # Lower than alpha by design: weakening should be slower than strengthening.
+  # PRD does not hardcode this ratio, but asymmetry is intentional.
+  beta: 0.10
+
+  # Decay rate per unit time (per day).
+  # Range: (0.0, ∞) — practically small (e.g., 0.001 to 0.05)
+  # Higher = faster forgetting. 0.01 ≈ slow, gradual fading over weeks.
+  decay_lambda: 0.01
+
+
+# -----------------------------------------------------------------------------
+# evidence_weights
+#
+# Not all evidence has equal weight (PRD V2 §13 — Evidence Weight).
+# These weights are used as the 'w' variable in the learning formulas above.
+#
+# Source types and their relative weights:
+#   explicit_user_statement → user directly and clearly stated the relationship
+#   direct_experience       → relationship observed directly in a raw experience
+#   llm_interpretation      → relationship inferred by LLM from experience text
+#   semantic_similarity     → relationship inferred from semantic proximity only
+#
+# PRD V2 §13: "System must not treat 'LLM guessed...' the same as 'User explicitly said...'"
+# -----------------------------------------------------------------------------
+evidence_weights:
+  explicit_user_statement: 1.00  # Highest — user explicitly stated causality or relationship
+  direct_experience:       0.80  # High — observed directly in a raw experience
+  llm_interpretation:      0.40  # Medium — LLM inference, not verified
+  semantic_similarity:     0.20  # Low — inferred from embedding proximity only
+
+
+# -----------------------------------------------------------------------------
+# activation
+#
+# Controls which nodes become "active" given a current situation.
+# PRD V2 §21, PRD V2.1 §9
+#
+# Formula (conceptual, not final):
+#   activation = f(
+#       semantic_relevance,
+#       recency,
+#       frequency,
+#       emotional_salience,
+#       context_similarity,
+#       association_strength,
+#       internal_state        # not implemented in V2.1
+#   )
+#
+# PRD V2.1 §9: "Not all factors need to be available in the first implementation."
+# The initial implementation may use a subset of these factors.
+# -----------------------------------------------------------------------------
+activation:
+  # Minimum activation value for a node to be considered "active".
+  # Nodes below this threshold are not included in active working set.
+  # Range: [0.0, 1.0]
+  threshold: 0.20
+
+  # Weights for the Initial Activation Engine
+  # These weights must sum to 1.0 ideally (excluding state modulation).
+  weight_relevance: 0.35
+  weight_recency: 0.25
+  weight_frequency: 0.15
+  weight_association: 0.25
+
+  # Internal State Modulation Weights
+  # These weights define how InternalState modulates the base activation.
+  # Positive values increase activation, negative values decrease it.
+  weight_state_energy: 0.10
+  weight_state_stress: -0.10
+  weight_state_curiosity: 0.15
+
+  # Maximum depth for spreading activation traversal.
+  # Prevents the entire graph from becoming active at once.
+  # PRD V2 §22 — Spreading Activation: "must have depth limit."
+  # Range: [1, ∞) — keep small for performance; expand as system matures.
+  max_depth: 3
+
+  # Propagation decay for spreading activation via associations.
+  # Represents how much activation energy is lost per hop.
+  # Range: [0.0, 1.0]. Lower means faster decay.
+  propagation_decay: 0.50
+
+  # Propagation decay for spreading activation via Assemblies.
+  # Usually higher than pairwise association decay because assemblies 
+  # represent strong cohesive episodic contexts.
+  assembly_propagation_decay: 0.80
+
+  # Fraction by which activation decays at each spreading depth step.
+  # Example: depth=1 → factor=1.0, depth=2 → factor=0.7, depth=3 → factor=0.49
+  # Not specified in PRD V2.1; included here as a required operational parameter.
+  # NOTE: This is an addition beyond what PRD V2.1 explicitly lists.
+  # Justified by PRD V2 §22: "spreading activation must have decay."
+  spread_decay_factor: 0.70
+
+
+# -----------------------------------------------------------------------------
+# pattern
+#
+# Controls when an observation becomes a pattern candidate.
+# PRD V2 §16, PRD V2.1 §7
+#
+# PRD V2 §16: "Pattern must not form from a single experience."
+# PRD V2.1 §7: minimum_evidence = 3
+#
+# NOTE: Pattern formation is NOT implemented in V2.1.
+# These parameters are defined here so the system knows the threshold
+# when it is eventually implemented. Having them here avoids hardcoding.
+# -----------------------------------------------------------------------------
+pattern:
+  # Minimum number of supporting experiences required before an association
+  # can be promoted to a "pattern candidate".
+  # PRD V2.1 §7 explicitly sets this to 3.
+  minimum_evidence: 3
+
+  # Minimum confidence level required for an association before it can
+  # be considered as a pattern candidate.
+  # Not specified in PRD V2.1 — this is a reasonable operational default.
+  # NOTE: Mark as tentative; requires empirical calibration.
+  minimum_confidence: 0.60
+
+  # Decimals used for rounding Assembly member weights when forming Identity.
+  # Weight is normalized to this precision to ensure stable configuration matching.
+  assembly_weight_rounding_decimals: 1
+
+
+# -----------------------------------------------------------------------------
+# internal_state
+#
+# Controls how the internal state updates based on emotional signals.
+# -----------------------------------------------------------------------------
+internal_state:
+  decay_rate: 0.05
+  emotion_influence: 0.10
+
+# =============================================================================
+# END OF PARAMS
+# =============================================================================
+#
+# Parameter groups:
+#
+#   learning            → association strength update rules
+#   evidence_weights    → how much different evidence sources count
+#   activation          → which nodes become active and how far it spreads
+#   pattern             → thresholds for pattern formation (future use)
+#   internal_state      → state decay and emotion influence
+#
+# How to use:
+#   Load this file using PyYAML or similar library.
+#   Pass parameters as a config object into the Brain Engine.
+#   Do NOT hardcode any of these values in source code.
+#
+# Calibration approach (PRD V2 §38, §40, §41):
+#   1. Run synthetic experience datasets.
+#   2. Measure extraction accuracy, retrieval precision, confidence calibration.
+#   3. Adjust alpha, beta, decay_lambda, threshold, minimum_evidence accordingly.
+#   4. Re-evaluate. Repeat.
+# =============================================================================

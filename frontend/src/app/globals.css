@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+:root {
+  /* Design Tokens */
+  --bg-primary: #000000;
+  --bg-secondary: #09090b;
+  --bg-tertiary: #18181b;
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa; /* Increased contrast WCAG AA */
+  --text-muted: #71717a;
+  
+  --accent: #0d9488; /* teal-600 */
+  --accent-hover: #14b8a6; /* teal-500 */
+  --accent-glow: rgba(20, 184, 166, 0.2);
+  
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  
+  --spacing-1: 0.25rem; /* 4px scale */
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+}
+
+@theme inline {
+  --color-background: var(--bg-primary);
+  --color-foreground: var(--text-primary);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 14px; /* Default base size increased */
+}
+
+/* Base minimums */
+label, .label-text {
+  font-size: 12px;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Fade mask for scroll areas */
+.scroll-fade-bottom {
+  mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+}
+
+/* Custom Toast Animation */
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.toast-enter {
+  animation: slideUpFade 0.3s ease-out forwards;
+}
+
+/* Custom ReactFlow Controls */
+.react-flow__controls {
+  display: flex !important;
+  flex-direction: row !important;
+  background: var(--bg-tertiary) !important;
+  border: 1px solid #27272a !important;
+  border-radius: var(--radius-md) !important;
+  padding: 4px !important;
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.8) !important;
+  gap: 4px;
+}
+.react-flow__controls-button {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: none !important;
+  border-radius: var(--radius-sm) !important;
+  width: 36px !important;
+  height: 36px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  fill: var(--text-secondary) !important;
+  transition: all 0.2s ease !important;
+}
+.react-flow__controls-button:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  fill: var(--text-primary) !important;
+}
+.react-flow__controls-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+.react-flow__panel.top-right {
+  top: 1.5rem !important;
+  right: 1.5rem !important;
+}
+
+/* Brain Neuron Animations */
+@keyframes brainGlow {
+  0%, 100% {
+    opacity: 0.15;
+    transform: scale(0.95);
+    filter: blur(8px);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.15);
+    filter: blur(12px);
+  }
+}
+
