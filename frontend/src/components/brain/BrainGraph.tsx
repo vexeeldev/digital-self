@@ -20,12 +20,12 @@ import { forceSimulation, forceLink, forceManyBody, forceCenter, forceCollide } 
 import { getGraph } from '@/lib/api';
 import { ApiGraphNode, ApiGraphEdge } from '@/lib/types';
 import MemoryNode from './MemoryNode';
+import BrainGraph3D from './BrainGraph3D';
 
 const nodeTypes = {
   memoryNode: MemoryNode,
 };
 
-// Dark theme node colors — each type gets a distinct border accent
 const nodeWidth = 100;
 const nodeHeight = 100;
 
@@ -101,12 +101,17 @@ export default function BrainGraph({
 }: BrainGraphProps) {
   const [nodes, setNodes] = useState<FlowNode[]>([]);
   const [edges, setEdges] = useState<FlowEdge[]>([]);
+  const [rawApiNodes, setRawApiNodes] = useState<ApiGraphNode[]>([]);
+  const [rawApiEdges, setRawApiEdges] = useState<ApiGraphEdge[]>([]);
   const [state, setState] = useState<GraphState>('loading');
-  const hasFilter = !!(experienceId || nodeId);
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('3d'); // Default to 3D for WOW effect
 
   useEffect(() => {
     setState('loading');
     getGraph(experienceId, nodeId).then((data) => {
+      setRawApiNodes(data.nodes);
+      setRawApiEdges(data.edges);
+
       if (data.nodes.length === 0) {
         setState('empty-no-memory');
         setNodes([]);
@@ -121,7 +126,7 @@ export default function BrainGraph({
     });
   }, [refreshTrigger, experienceId, nodeId]);
 
-  // Re-render nodes when selection changes (highlight)
+  // Re-render nodes when selection changes
   useEffect(() => {
     if (state !== 'has-data') return;
     setNodes((prev) =>
@@ -143,7 +148,7 @@ export default function BrainGraph({
 
   if (state === 'loading') {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full bg-black">
         <div className="text-zinc-600 text-xs font-mono uppercase tracking-widest animate-pulse">Loading memory...</div>
       </div>
     );
@@ -151,7 +156,7 @@ export default function BrainGraph({
 
   if (state === 'empty-no-filter') {
     return (
-      <div className="flex items-center justify-center h-full flex-col gap-3 text-center px-8">
+      <div className="flex items-center justify-center h-full flex-col gap-3 text-center px-8 bg-black">
         <p className="text-zinc-600 text-xs font-mono uppercase tracking-widest">No memory nodes exist yet. Add an experience!</p>
       </div>
     );
@@ -159,7 +164,7 @@ export default function BrainGraph({
 
   if (state === 'empty-no-memory') {
     return (
-      <div className="flex items-center justify-center h-full flex-col gap-3 text-center px-8">
+      <div className="flex items-center justify-center h-full flex-col gap-3 text-center px-8 bg-black">
         <p className="text-zinc-400 text-sm">Experience recorded.</p>
         <p className="text-zinc-600 text-xs">Memory structures are not available for visualization yet.</p>
       </div>
@@ -167,45 +172,85 @@ export default function BrainGraph({
   }
 
   return (
-    <div style={{ height: '100%', width: '100%' }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={(_, node) => onNodeClick(node.id)}
-        fitView
-        fitViewOptions={{ padding: 0.5, maxZoom: 1.5 }}
-        minZoom={0.1}
-        maxZoom={3}
-        className="bg-[#000000]"
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={32}
-          size={1}
-          color="#27272a"
-        />
-        <Controls position="bottom-right" />
-        <Panel position="top-right" className="bg-[#09090b]/80 backdrop-blur border border-[#27272a] px-5 py-3 rounded-lg shadow-xl flex items-center gap-6 text-[10px] font-mono uppercase tracking-widest text-[#a1a1aa] transition-all">
-          <div className="flex flex-col items-center gap-1 group cursor-default">
+    <div style={{ height: '100%', width: '100%' }} className="relative bg-black">
+      {/* 2D / 3D Mode View Switcher */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
+        {/* View Mode Toggle Pill */}
+        <div className="bg-[#09090b]/90 backdrop-blur border border-[#27272a] p-1 rounded-lg flex items-center gap-1 shadow-2xl">
+          <button
+            onClick={() => setViewMode('2d')}
+            className={`px-3 py-1.5 rounded text-[11px] font-mono tracking-wider transition-all cursor-pointer ${
+              viewMode === '2d'
+                ? 'bg-[#18181b] text-teal-400 border border-teal-500/30 shadow'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            2D GRID
+          </button>
+          <button
+            onClick={() => setViewMode('3d')}
+            className={`px-3 py-1.5 rounded text-[11px] font-mono tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+              viewMode === '3d'
+                ? 'bg-teal-500/20 text-teal-300 border border-teal-500/50 shadow-lg shadow-teal-500/10'
+                : 'text-zinc-400 hover:text-white'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
+            3D GALAXY
+          </button>
+        </div>
+
+        {/* Stats Panel */}
+        <div className="bg-[#09090b]/80 backdrop-blur border border-[#27272a] px-4 py-2 rounded-lg shadow-xl flex items-center gap-4 text-[10px] font-mono uppercase tracking-widest text-[#a1a1aa]">
+          <div className="flex flex-col items-center">
             <span>Memories</span>
-            <span className="text-[14px] text-white font-bold group-hover:text-[#0d9488] transition-colors">{memoryCount}</span>
+            <span className="text-[13px] text-white font-bold">{memoryCount}</span>
           </div>
-          <div className="w-px h-8 bg-[#27272a]"></div>
-          <div className="flex flex-col items-center gap-1 group cursor-default">
+          <div className="w-px h-6 bg-[#27272a]"></div>
+          <div className="flex flex-col items-center">
             <span>Nodes</span>
-            <span className="text-[14px] text-white font-bold group-hover:text-[#0d9488] transition-colors">{nodes.length}</span>
+            <span className="text-[13px] text-white font-bold">{rawApiNodes.length}</span>
           </div>
-          <div className="w-px h-8 bg-[#27272a]"></div>
-          <div className="flex flex-col items-center gap-1 group cursor-default">
+          <div className="w-px h-6 bg-[#27272a]"></div>
+          <div className="flex flex-col items-center">
             <span>Edges</span>
-            <span className="text-[14px] text-white font-bold group-hover:text-[#0d9488] transition-colors">{edges.length}</span>
+            <span className="text-[13px] text-white font-bold">{rawApiEdges.length}</span>
           </div>
-        </Panel>
-      </ReactFlow>
+        </div>
+      </div>
+
+      {/* Render 3D or 2D based on viewMode */}
+      {viewMode === '3d' ? (
+        <BrainGraph3D
+          apiNodes={rawApiNodes}
+          apiEdges={rawApiEdges}
+          selectedNodeId={selectedNodeId}
+          onNodeClick={onNodeClick}
+        />
+      ) : (
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={(_, node) => onNodeClick(node.id)}
+          fitView
+          fitViewOptions={{ padding: 0.5, maxZoom: 1.5 }}
+          minZoom={0.1}
+          maxZoom={3}
+          className="bg-[#000000]"
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={32}
+            size={1}
+            color="#27272a"
+          />
+          <Controls position="bottom-right" />
+        </ReactFlow>
+      )}
     </div>
   );
 }
